@@ -17,71 +17,59 @@ import com.mx.cbtis.gestor.repository.ComentariosRepository;
 
 @RestController
 public class ComentariosController {
-	
+
 	@Autowired
 	ComentariosRepository comentariostable;
-	
-	@PostMapping("/getComentario")
 
-	public List<Comentarios> getComentario(@RequestBody Comentarios idComentario){
-		List<Comentarios> listaComentarios = comentariostable.findByTarea(idComentario.getId_tarea());
-		return listaComentarios;
+	@PostMapping("/getComentario")
+	public List<Comentarios> getComentario(@RequestBody Comentarios idComentario) {
+		return comentariostable.findByTarea(idComentario.getId_tarea());
 	}
-	
+
 	@GetMapping("/buscarComentario")
 	public Comentarios getComentario(@RequestParam int id) {
-		
 		Comentarios buscar = new Comentarios();
 		Optional<Comentarios> comentario = comentariostable.findById(id);
-		if(comentario.isPresent()) {
+		if (comentario.isPresent()) {
 			buscar = comentario.get();
 		}
-		
 		return buscar;
 	}
-	
+
 	@PostMapping("/addComentario")
-	public int addComentario(@RequestBody Comentarios comentario) {
-		
+	public int addComentario(@RequestBody(required = false) Comentarios comentario) {
 		int flag = 0;
-		if(!comentario.equals(null)) {
+		if (comentario != null) {
 			comentariostable.save(comentario);
 			flag = 1;
 		}
-		
 		return flag;
 	}
-	
+
 	@PostMapping("/updateComentario")
-	public int updateComentario(@RequestBody Comentarios comentario) {
-		
+	public int updateComentario(@RequestBody(required = false) Comentarios comentario) {
 		int flag = 0;
-		if(!comentario.equals(null)) {
+		if (comentario != null) {
 			comentariostable.save(comentario);
 			flag = 1;
 		}
-		
 		return flag;
 	}
-	
+
 	@DeleteMapping("/deleteComentario")
-	public int deleteComentario(@RequestBody Comentarios comentario) {
-		
+	public int deleteComentario(@RequestBody(required = false) Comentarios comentario) {
 		int flag = 0;
-		if(!comentario.equals(null)) {
+		if (comentario != null) {
 			comentariostable.delete(comentario);
 			flag = 1;
 		}
-		
 		return flag;
 	}
-	
+
 	@PostMapping("/buscarComentarios")
-	public List<Comentarios> getComentarios(){
-		
+	public List<Comentarios> getComentarios() {
 		List<Comentarios> listaComentarios = new ArrayList<>();
-		comentariostable.findAll().forEach(listaComentarios :: add);
+		comentariostable.findAll().forEach(listaComentarios::add);
 		return listaComentarios;
 	}
-
 }

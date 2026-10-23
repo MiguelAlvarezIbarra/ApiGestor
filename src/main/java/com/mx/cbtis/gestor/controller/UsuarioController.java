@@ -17,78 +17,69 @@ import com.mx.cbtis.gestor.repository.UsuarioRepository;
 
 @RestController
 public class UsuarioController {
-	
+
 	@Autowired
 	UsuarioRepository usuariotable;
-	
+
 	@PostMapping("/getUsuarioLogin")
 	public Usuario getUsuarioLogin(@RequestBody Usuario userParam) {
-		
 		Optional<Usuario> optionaluser = usuariotable.findByCorreoPass(
 				userParam.getCorreo_electronico(),
 				userParam.getContrasena());
-		
+
 		Usuario user = new Usuario();
-		
-		if(optionaluser.isPresent()) {
+		if (optionaluser.isPresent()) {
 			user = optionaluser.get();
-		}else {
+		} else {
 			user.setNombre("000");
 		}
-		
 		return user;
 	}
-	
+
 	@GetMapping("/buscarUsuario")
 	public Usuario getUsuario(@RequestParam int id) {
-		
 		Usuario buscar = new Usuario();
 		Optional<Usuario> usuario = usuariotable.findById(id);
-		if(usuario.isPresent())
-		{
+		if (usuario.isPresent()) {
 			buscar = usuario.get();
 		}
-		
 		return buscar;
 	}
-	
+
 	@PostMapping("/addUsuario")
-	public int addUsuario(@RequestBody Usuario usuario) {
+	public int addUsuario(@RequestBody(required = false) Usuario usuario) {
 		int flag = 0;
-		if(!usuario.equals(null)) {
+		if (usuario != null) {
 			usuariotable.save(usuario);
 			flag = 1;
 		}
-		
 		return flag;
 	}
-	
+
 	@PostMapping("/updateUsuario")
-	public int updateUsuario(@RequestBody Usuario usuario) {
+	public int updateUsuario(@RequestBody(required = false) Usuario usuario) {
 		int flag = 0;
-		if(!usuario.equals(null)) {
+		if (usuario != null) {
 			usuariotable.save(usuario);
 			flag = 1;
 		}
-		
 		return flag;
 	}
-	
+
 	@DeleteMapping("/deleteUsuario")
-	public int deleteUsuario(@RequestBody Usuario usuario) {
+	public int deleteUsuario(@RequestBody(required = false) Usuario usuario) {
 		int flag = 0;
-		if(!usuario.equals(null)) {
+		if (usuario != null) {
 			usuariotable.delete(usuario);
 			flag = 1;
 		}
-		
 		return flag;
 	}
-	
+
 	@PostMapping("/buscarUsuarios")
-	public List<Usuario> getUsuarios(){
-		List<Usuario> listaUsuarios = new ArrayList<>(); 
+	public List<Usuario> getUsuarios() {
+		List<Usuario> listaUsuarios = new ArrayList<>();
 		usuariotable.findAll().forEach(listaUsuarios::add);
 		return listaUsuarios;
-	}		
+	}
 }
