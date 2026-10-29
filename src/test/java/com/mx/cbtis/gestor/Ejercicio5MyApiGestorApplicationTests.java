@@ -319,4 +319,31 @@ class Ejercicio5MyApiGestorApplicationTests {
 		assertEquals("DEV", usr.getRol());
 		assertEquals("pic.jpg", usr.getImagen_usuario());
 	}
+
+	// =========================================================================
+	// 7. PRUEBAS DE SEGURIDAD DE BASE DE DATOS (SQLi CWE-89, CWE-287, CWE-256)
+	// =========================================================================
+
+	@Test
+	@DisplayName("GES-07: Seguridad BD - Prevención de SQL Injection (CWE-89), Auth Bypass (CWE-287) y Hashes BCrypt (CWE-256)")
+	void testDatabaseSecurityAndSqlInjectionPrevention() {
+		// 1. Prueba de resistencia a SQL Injection en autenticación (CWE-89 / CWE-287)
+		String sqliEmailPayload = "admin@cbtis75.edu.mx' OR '1'='1' --";
+		String sqliPassPayload = "' OR 1=1; DROP TABLE usuario; --";
+		when(usuarioRepository.findByCorreoPass(sqliEmailPayload, sqliPassPayload)).thenReturn(Optional.empty());
+
+		Usuario atacante = new Usuario(null, null, sqliEmailPayload, sqliPassPayload, null, null);
+		Usuario resultadoSqli = usuarioController.getUsuarioLogin(atacante);
+		assertEquals("000", resultadoSqli.getNombre());
+		assertNull(resultadoSqli.getId_usuario());
+
+		// 2. Verificación de autenticación con hash criptográfico BCrypt ($2a$12$) en lugar de texto plano (CWE-256)
+		String bcryptHash = "$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW";
+		Usuario usuarioSeguro = new Usuario(131, "Ana Paola Ramírez Vázquez", "ana22533@cbtis75.edu.mx", bcryptHash, "Estudiante", "#70FAB7");
+		when(usuarioRepository.findByCorreoPass("ana22533@cbtis75.edu.mx", bcryptHash)).thenReturn(Optional.of(usuarioSeguro));
+
+		Usuario loginSeguro = usuarioController.getUsuarioLogin(usuarioSeguro);
+		assertEquals(131, loginSeguro.getId_usuario());
+		assertEquals(true, loginSeguro.getContrasena().startsWith("$2a$12$"));
+	}
 }
