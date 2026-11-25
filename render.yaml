@@ -60,4 +60,4 @@ services:
       - key: JAVA_TOOL_OPTIONS
         value: "-XX:+UseContainerSupport -Xmx384m"
       - key: API_GESTOR_URL
-        value: "https://api-gestor-backend-7zfi.onrender.com"
+        sync: false
