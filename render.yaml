@@ -1,0 +1,57 @@
+# ==============================================================================
+# BLUEPRINT DE DESPLIEGUE CLOUD (IaC PaaS) — RENDER CLOUD
+# Proyecto Integrador Final: Circuito DevOps + IaC + Cloud
+# Despliega de manera declarativa y gratuita:
+#   1. Base de Datos Administrada PostgreSQL 15 (dbgestor-cloud-db)
+#   2. Microservicio Backend Java 21 (api-gestor-backend)
+#   3. Microservicio Frontend Java 21 (api-cliente-frontend)
+# Nota de Seguridad: Ninguna contraseña ni token se almacena en texto plano;
+# Render inyecta las cadenas de conexión desde la base de datos administrada.
+# ==============================================================================
+
+databases:
+  - name: dbgestor-cloud-db
+    databaseName: dbgestor
+    user: app_gestor_svc
+    plan: free
+    ipAllowList: []
+
+services:
+  - type: web
+    name: api-gestor-backend
+    runtime: docker
+    repo: https://github.com/MiguelAlvarezIbarra/ApiGestor
+    branch: main
+    plan: free
+    healthCheckPath: /buscarProyectos
+    envVars:
+      - key: JAVA_TOOL_OPTIONS
+        value: "-XX:+UseContainerSupport -Xmx384m"
+      - key: DB_URL
+        fromDatabase:
+          name: dbgestor-cloud-db
+          property: connectionString
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dbgestor-cloud-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dbgestor-cloud-db
+          property: password
+
+  - type: web
+    name: api-cliente-frontend
+    runtime: docker
+    repo: https://github.com/MiguelAlvarezIbarra/ApiCliente
+    branch: main
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: JAVA_TOOL_OPTIONS
+        value: "-XX:+UseContainerSupport -Xmx384m"
+      - key: API_GESTOR_URL
+        fromService:
+          type: web
+          name: api-gestor-backend
+          property: hostport
