@@ -1,4 +1,4 @@
-name: "CI/CD Cloud Pipeline - ApiGestor (Java 21 + JaCoCo 100% + Semgrep SAST + Seguridad BD + Cloud IaC)"
+name: "CI/CD Cloud Pipeline - ApiGestor (Java 21 + JaCoCo 100% + SonarQube Cloud + Semgrep + Seguridad BD + Cloud IaC)"
 
 on:
   push:
@@ -7,11 +7,13 @@ on:
 
 jobs:
   build-test-jacoco-db:
-    name: "1. Compilación Java 21, Pruebas Unitarias + Seguridad BD (GES-07) y JaCoCo 100%"
+    name: "1. Compilación Java 21, Surefire, JaCoCo 100% y SonarQube Cloud"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Código Fuente (GitHub SCM)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar OpenJDK 21 LTS (Eclipse Temurin) y Cache Maven
         uses: actions/setup-java@v4
@@ -19,6 +21,13 @@ jobs:
           distribution: "temurin"
           java-version: "21"
           cache: "maven"
+
+      - name: Cache SonarQube Cloud Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
       - name: Verificar Versiones de Java 21 y Maven 3.9+
         run: |
@@ -41,6 +50,17 @@ jobs:
           print(f"JaCoCo Summary -> Methods: {covered_methods}/{covered_methods + missed_methods} (100.0%) | Branches: {covered_branches}/{covered_branches + missed_branches} (100.0%)")
           assert missed_methods == 0 and missed_branches == 0
           EOF
+
+      - name: Análisis de Calidad y Seguridad en SonarQube Cloud (sonar-maven-plugin 5.5.0.6356)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.organization=miguelalvarezibarra
+          -Dsonar.projectKey=MiguelAlvarezIbarra_ApiGestor
+          -Dsonar.qualitygate.wait=true
 
       - name: Archivar Reporte HTML/XML/CSV JaCoCo 100% en GitHub Cloud
         uses: actions/upload-artifact@v4
