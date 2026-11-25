@@ -1,12 +1,10 @@
 # ==============================================================================
-# BLUEPRINT DE DESPLIEGUE CLOUD (IaC PaaS) — RENDER CLOUD
+# BLUEPRINT DE DESPLIEGUE CLOUD (IaC PaaS) — RENDER CLOUD (COMPATIBLE FREE TIER)
 # Proyecto Integrador Final: Circuito DevOps + IaC + Cloud
 # Despliega de manera declarativa y gratuita:
-#   1. Base de Datos Administrada PostgreSQL 15 (dbgestor-cloud-db)
+#   1. Base de Datos Administrada PostgreSQL (dbgestor-cloud-db)
 #   2. Microservicio Backend Java 21 (api-gestor-backend)
 #   3. Microservicio Frontend Java 21 (api-cliente-frontend)
-# Nota de Seguridad: Ninguna contraseña ni token se almacena en texto plano;
-# Render inyecta las cadenas de conexión desde la base de datos administrada.
 # ==============================================================================
 
 databases:
@@ -14,7 +12,6 @@ databases:
     databaseName: dbgestor
     user: app_gestor_svc
     plan: free
-    ipAllowList: []
 
 services:
   - type: web
@@ -23,14 +20,24 @@ services:
     repo: https://github.com/MiguelAlvarezIbarra/ApiGestor
     branch: main
     plan: free
-    healthCheckPath: /buscarProyectos
+    healthCheckPath: /actuator/health
     envVars:
+      - key: PORT
+        value: "8081"
       - key: JAVA_TOOL_OPTIONS
         value: "-XX:+UseContainerSupport -Xmx384m"
-      - key: DB_URL
+      - key: DB_HOST
         fromDatabase:
           name: dbgestor-cloud-db
-          property: connectionString
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: dbgestor-cloud-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: dbgestor-cloud-db
+          property: database
       - key: DB_USERNAME
         fromDatabase:
           name: dbgestor-cloud-db
@@ -46,12 +53,14 @@ services:
     repo: https://github.com/MiguelAlvarezIbarra/ApiCliente
     branch: main
     plan: free
-    healthCheckPath: /
+    healthCheckPath: /actuator/health
     envVars:
+      - key: PORT
+        value: "8082"
       - key: JAVA_TOOL_OPTIONS
         value: "-XX:+UseContainerSupport -Xmx384m"
-      - key: API_GESTOR_URL
+      - key: API_GESTOR_HOST
         fromService:
           type: web
           name: api-gestor-backend
-          property: hostport
+          property: host
