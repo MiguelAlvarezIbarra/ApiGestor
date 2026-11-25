@@ -59,8 +59,5 @@ services:
         value: "8082"
       - key: JAVA_TOOL_OPTIONS
         value: "-XX:+UseContainerSupport -Xmx384m"
-      - key: API_GESTOR_HOST
-        fromService:
-          type: web
-          name: api-gestor-backend
-          property: host
+      - key: API_GESTOR_URL
+        value: "https://api-gestor-backend-7zfi.onrender.com"
