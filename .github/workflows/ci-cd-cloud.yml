@@ -78,13 +78,12 @@ jobs:
       - name: Checkout Código Fuente
         uses: actions/checkout@v4
 
-      - name: Instalar Semgrep CLI en Runner Cloud
-        run: pip install --quiet semgrep
-
-      - name: Ejecutar Escaneo SAST Semgrep Excluyendo Carpetas target/
+      - name: Ejecutar Escaneo SAST Semgrep en Contenedor Fijado Excluyendo Carpetas target/
         run: |
-          semgrep --version
-          semgrep scan --config auto --exclude="target" --json --output semgrep-report-ApiGestor.json src/main/java Dockerfile
+          docker run --rm -v "${{ github.workspace }}:/src" -w /src semgrep/semgrep:1.187.0 \
+            semgrep --version
+          docker run --rm -v "${{ github.workspace }}:/src" -w /src semgrep/semgrep:1.187.0 \
+            semgrep scan --config auto --exclude="target" --json --output semgrep-report-ApiGestor.json src/main/java Dockerfile
 
       - name: Auditar Esquema SQL Endurecido (dump-dbgestor-remediado-seguro.sql) y Reporte JSON
         run: |
