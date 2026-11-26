@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,21 +19,27 @@ import com.mx.cbtis.gestor.repository.UsuarioRepository;
 @RestController
 public class UsuarioController {
 
+	private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder(12);
+
 	@Autowired
 	UsuarioRepository usuariotable;
 
+	private String hashPasswordIfPlain(String password) {
+		if (password != null && !password.startsWith("$2")) {
+			return PASSWORD_ENCODER.encode(password);
+		}
+		return password;
+	}
+
 	@PostMapping("/getUsuarioLogin")
 	public Usuario getUsuarioLogin(@RequestBody Usuario userParam) {
-		Optional<Usuario> optionaluser = usuariotable.findByCorreoPass(
-				userParam.getCorreo_electronico(),
-				userParam.getContrasena());
-
-		Usuario user = new Usuario();
-		if (optionaluser.isPresent()) {
-			user = optionaluser.get();
-		} else {
-			user.setNombre("000");
+		Optional<Usuario> optionaluser = usuariotable.findByCorreo(userParam.getCorreo_electronico());
+		if (optionaluser.isPresent()
+				&& PASSWORD_ENCODER.matches(String.valueOf(userParam.getContrasena()), optionaluser.get().getContrasena())) {
+			return optionaluser.get();
 		}
+		Usuario user = new Usuario();
+		user.setNombre("000");
 		return user;
 	}
 
@@ -50,6 +57,7 @@ public class UsuarioController {
 	public int addUsuario(@RequestBody(required = false) Usuario usuario) {
 		int flag = 0;
 		if (usuario != null) {
+			usuario.setContrasena(hashPasswordIfPlain(usuario.getContrasena()));
 			usuariotable.save(usuario);
 			flag = 1;
 		}
@@ -60,6 +68,7 @@ public class UsuarioController {
 	public int updateUsuario(@RequestBody(required = false) Usuario usuario) {
 		int flag = 0;
 		if (usuario != null) {
+			usuario.setContrasena(hashPasswordIfPlain(usuario.getContrasena()));
 			usuariotable.save(usuario);
 			flag = 1;
 		}

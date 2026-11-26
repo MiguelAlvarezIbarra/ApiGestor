@@ -17,6 +17,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 import com.mx.cbtis.gestor.controller.AsignacionesController;
 import com.mx.cbtis.gestor.controller.ComentariosController;
 import com.mx.cbtis.gestor.controller.ProyectosController;
@@ -208,21 +210,26 @@ class Ejercicio5MyApiGestorApplicationTests {
 	// ==========================================
 
 	@Test
-	@DisplayName("GES-05: UsuarioController - login exitoso/fallido, búsqueda, alta, edición, baja y listado")
+	@DisplayName("GES-05: UsuarioController - login exitoso/fallido, BCrypt, búsqueda, alta, edición, baja y listado")
 	void testUsuarioController() {
-		Usuario u = new Usuario(1, "Miguel", "miguel@cbtis.mx", "pass123", "ADMIN", "avatar.png");
-		when(usuarioRepository.findByCorreoPass("miguel@cbtis.mx", "pass123")).thenReturn(Optional.of(u));
-		when(usuarioRepository.findByCorreoPass("miguel@cbtis.mx", "wrong")).thenReturn(Optional.empty());
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(u));
+		String bcryptHash = new BCryptPasswordEncoder(12).encode("pass123");
+		Usuario stored = new Usuario(1, "Miguel", "miguel@cbtis.mx", bcryptHash, "ADMIN", "avatar.png");
+		when(usuarioRepository.findByCorreo("miguel@cbtis.mx")).thenReturn(Optional.of(stored));
+		when(usuarioRepository.findByCorreo("desconocido@cbtis.mx")).thenReturn(Optional.empty());
+		when(usuarioRepository.findById(1)).thenReturn(Optional.of(stored));
 		when(usuarioRepository.findById(99)).thenReturn(Optional.empty());
-		when(usuarioRepository.findAll()).thenReturn(Arrays.asList(u));
+		when(usuarioRepository.findAll()).thenReturn(Arrays.asList(stored));
 
-		Usuario loginOk = usuarioController.getUsuarioLogin(u);
+		Usuario loginInput = new Usuario(null, null, "miguel@cbtis.mx", "pass123", null, null);
+		Usuario loginOk = usuarioController.getUsuarioLogin(loginInput);
 		assertEquals("Miguel", loginOk.getNombre());
 
 		Usuario credencialesInvalidas = new Usuario(null, null, "miguel@cbtis.mx", "wrong", null, null);
 		Usuario loginFail = usuarioController.getUsuarioLogin(credencialesInvalidas);
 		assertEquals("000", loginFail.getNombre());
+
+		Usuario correoInexistente = new Usuario(null, null, "desconocido@cbtis.mx", "pass123", null, null);
+		assertEquals("000", usuarioController.getUsuarioLogin(correoInexistente).getNombre());
 
 		Usuario encontrado = usuarioController.getUsuario(1);
 		assertEquals(1, encontrado.getId_usuario());
@@ -230,18 +237,23 @@ class Ejercicio5MyApiGestorApplicationTests {
 		Usuario noEncontrado = usuarioController.getUsuario(99);
 		assertNull(noEncontrado.getId_usuario());
 
-		assertEquals(1, usuarioController.addUsuario(u));
+		Usuario nuevoPlano = new Usuario(null, "Nuevo", "nuevo@cbtis.mx", "clavePlana123", "Estudiante", "img");
+		assertEquals(1, usuarioController.addUsuario(nuevoPlano));
+		assertEquals(true, nuevoPlano.getContrasena().startsWith("$2a$12$"));
 		assertEquals(0, usuarioController.addUsuario(null));
 
-		assertEquals(1, usuarioController.updateUsuario(u));
+		Usuario sinClave = new Usuario(2, "SinClave", "sin@cbtis.mx", null, "Estudiante", "img");
+		assertEquals(1, usuarioController.addUsuario(sinClave));
+
+		assertEquals(1, usuarioController.updateUsuario(stored));
 		assertEquals(0, usuarioController.updateUsuario(null));
 
-		assertEquals(1, usuarioController.deleteUsuario(u));
+		assertEquals(1, usuarioController.deleteUsuario(stored));
 		assertEquals(0, usuarioController.deleteUsuario(null));
 
 		List<Usuario> lista = usuarioController.getUsuarios();
 		assertEquals(1, lista.size());
-		verify(usuarioRepository).delete(u);
+		verify(usuarioRepository).delete(stored);
 	}
 
 	// ==========================================
@@ -330,7 +342,7 @@ class Ejercicio5MyApiGestorApplicationTests {
 		// 1. Prueba de resistencia a SQL Injection en autenticación (CWE-89 / CWE-287)
 		String sqliEmailPayload = "admin@cbtis75.edu.mx' OR '1'='1' --";
 		String sqliPassPayload = "' OR 1=1; DROP TABLE usuario; --";
-		when(usuarioRepository.findByCorreoPass(sqliEmailPayload, sqliPassPayload)).thenReturn(Optional.empty());
+		when(usuarioRepository.findByCorreo(sqliEmailPayload)).thenReturn(Optional.empty());
 
 		Usuario atacante = new Usuario(null, null, sqliEmailPayload, sqliPassPayload, null, null);
 		Usuario resultadoSqli = usuarioController.getUsuarioLogin(atacante);
@@ -338,11 +350,12 @@ class Ejercicio5MyApiGestorApplicationTests {
 		assertNull(resultadoSqli.getId_usuario());
 
 		// 2. Verificación de autenticación con hash criptográfico BCrypt ($2a$12$) en lugar de texto plano (CWE-256)
-		String bcryptHash = "$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW";
+		String bcryptHash = new BCryptPasswordEncoder(12).encode("claveAnaSeguro123");
 		Usuario usuarioSeguro = new Usuario(131, "Ana Paola Ramírez Vázquez", "ana22533@cbtis75.edu.mx", bcryptHash, "Estudiante", "#70FAB7");
-		when(usuarioRepository.findByCorreoPass("ana22533@cbtis75.edu.mx", bcryptHash)).thenReturn(Optional.of(usuarioSeguro));
+		when(usuarioRepository.findByCorreo("ana22533@cbtis75.edu.mx")).thenReturn(Optional.of(usuarioSeguro));
 
-		Usuario loginSeguro = usuarioController.getUsuarioLogin(usuarioSeguro);
+		Usuario loginRequest = new Usuario(null, null, "ana22533@cbtis75.edu.mx", "claveAnaSeguro123", null, null);
+		Usuario loginSeguro = usuarioController.getUsuarioLogin(loginRequest);
 		assertEquals(131, loginSeguro.getId_usuario());
 		assertEquals(true, loginSeguro.getContrasena().startsWith("$2a$12$"));
 	}
